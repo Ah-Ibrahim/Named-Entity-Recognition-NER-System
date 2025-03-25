@@ -165,7 +165,7 @@ class MEMM(object):
         tag_labels = list(dic["id_to_tag"].keys()) + [
             -1
         ]  # add [-1] for out of bounds positions
-        self.tag_encoder = OneHotEncoder(handle_unknown="error", sparse=False).fit(
+        self.tag_encoder = OneHotEncoder(handle_unknown="error", sparse_output=False).fit(
             np.array(tag_labels).reshape(-1, 1)
         )
         self.model = linear_model.LogisticRegression(
@@ -216,7 +216,7 @@ class MEMM(object):
         # TODO: Set prior_tags to the list of tag ids for the last (self.num_prior_tags) tags
         # (6 points)
         # START HERE
-        ...
+        prior_tags = [tags.get(i_x, -1) for i_x in range(i - self.num_prior_tags, i)]
         # END
 
         if tuple(prior_tags) in self.tag_features_cache:
@@ -226,7 +226,9 @@ class MEMM(object):
             # TODO: Add one-hot encoding features to tag_features
             # (6 points)
             # START HERE
-            ...
+            for tag_id in prior_tags:
+                one_hot = self.tag_encoder.transform([[tag_id]])
+                tag_features.extend(one_hot.flatten())
             # END
 
         feature = np.append(word_features, tag_features)
@@ -397,14 +399,18 @@ urls = [
     "https://princeton-nlp.github.io/cos484/assignments/a2/eng.val",
 ]
 
+# Get the directory of the current script
+current_dir = os.path.dirname(os.path.abspath(__file__))
+
 for url in urls:
     response = requests.get(url)
     filename = url.split("/")[-1]
-    with open(filename, "wb") as f:
+    file_path = os.path.join(current_dir, filename)
+    with open(file_path, "wb") as f:
         f.write(response.content)
 
-train_file = "eng.train"
-test_file = "eng.val"
+train_file = os.path.join(current_dir, "eng.train")
+test_file = os.path.join(current_dir, "eng.val")
 
 # Load the training data
 train_sentences = load_sentences(train_file)
@@ -458,7 +464,12 @@ regex_features_2 = {
     # TODO: Add at least 3 new regular expression features to improve model performance
     # (8 points)
     # START HERE
-    # ...
+    "STARTS_WITH_CAPITAL": r"^[A-Z][a-z]+$",  # Proper nouns like names, places
+    "CONTAINS_DIGITS": r"\d+",  # Words containing numbers, often part of organizations or misc
+    "ALL_CAPS": r"^[A-Z]+$",  # All uppercase words, often organizations or locations
+    "CONTAINS_HYPHEN": r"-",  # Hyphenated words, often compound names or organizations
+    "ENDS_WITH_ING": r"ing$",  # Words ending with -ing, often not named entities
+    "CONTAINS_APOSTROPHE": r"'",  # Words with apostrophes, often possessives
     # END
 }
 
